@@ -25,4 +25,12 @@ services:
     ports:
       - 5432:5432
 
+  nats:
+    image: nats-streaming:latest
+    restart: always
+    ports:
+      - 4222:4222
+      - 8222:8222
+      - 6222:6222
+
 

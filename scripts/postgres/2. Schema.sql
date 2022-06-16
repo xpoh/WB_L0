@@ -1,3 +1,6 @@
+\c base10
+SET ROLE akaddr;
+
 create schema wb_l0;
 
 alter schema wb_l0 owner to akaddr;
