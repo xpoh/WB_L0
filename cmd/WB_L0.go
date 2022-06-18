@@ -1,42 +1,40 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	stan "github.com/nats-io/stan.go"
+	"github.com/nats-io/stan.go"
+	"github.com/xpoh/WB_L0/internal/queue"
+	"github.com/xpoh/WB_L0/internal/worker"
+	"os"
+	"os/signal"
 )
 
 func main() {
-	clusterID := "test-cluster"
-	clientID := "iddd"
-	sc, err := stan.Connect(clusterID, clientID)
-	if err != nil {
-		fmt.Printf("Error %v", err)
-		return
+	ctx := context.Background()
+	ch := make(chan stan.Msg, queue.Cfg.MaxWorkers)
+
+	q := queue.NewQueue(ctx, ch)
+
+	go func() {
+		err := q.Start()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	w := make([]*worker.Worker, queue.Cfg.MaxWorkers)
+	for i, v := range w {
+		v = worker.NewWorker("worker #"+fmt.Sprint(i), ctx, ch)
+		go v.Run()
 	}
-	// Simple Synchronous Publisher
-	sc.Publish("foo", []byte("Hello World")) // does not return until an ack has been received from NATS Streaming
 
-	// Simple Async Subscriber
-	sub, err := sc.Subscribe("foo", func(m *stan.Msg) {
-		fmt.Printf("Received a message: %s\n", string(m.Data))
-	})
-
-	// Unsubscribe
-	sub.Unsubscribe()
-
-	// Close connection
-	sc.Close()
-
-	sc, _ = stan.Connect("test-cluster", "clientid")
-
-	// Create a queue subscriber on "foo" for group "bar"
-	qsub1, _ := sc.QueueSubscribe("foo", "bar", qcb)
-
-	// Add a second member
-	qsub2, _ := sc.QueueSubscribe("foo", "bar", qcb)
-
-	// Notice that you can have a regular subscriber on that subject
-	sub, _ := sc.Subscribe("foo", cb)
-
-	// A message on "foo" will be received by sub and qsub1 or qsub2.
+	// Wait for a SIGINT (perhaps triggered by user with CTRL-C)
+	// Run cleanup when signal is received
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	for range signalChan {
+		fmt.Printf("\nReceived an interrupt, unsubscribing and closing connection...\n\n")
+		ctx.Done()
+	}
 }
