@@ -7,6 +7,6 @@ alter schema wb_l0 owner to akaddr;
 
 create table wb_l0.wb_orders
 (
-    order_uid uuid,
+    order_uid varchar,
     jsonData varchar
 );

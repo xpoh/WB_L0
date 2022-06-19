@@ -8,18 +8,25 @@ import (
 )
 
 type PostgreSQl struct {
-	dbUrl string
+	uri string
+	cfg pgx.ConnConfig
 }
 
-func NewPostgreSQl(db string) *PostgreSQl {
-	return &PostgreSQl{dbUrl: db}
+func NewPostgreSQl(uri string) *PostgreSQl {
+	cfg, err := pgx.ParseURI(uri)
+
+	if err != nil {
+		return nil
+	}
+
+	return &PostgreSQl{
+		uri: uri,
+		cfg: cfg,
+	}
 }
 
 func (p *PostgreSQl) WriteAll(m map[string]order.Order) error {
-	dbCfg := pgx.ConnConfig{
-		Host: p.dbUrl,
-	}
-	conn, err := pgx.Connect(dbCfg)
+	conn, err := pgx.Connect(p.cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -37,10 +44,7 @@ func (p *PostgreSQl) WriteAll(m map[string]order.Order) error {
 }
 
 func (p *PostgreSQl) Add(id string, ord order.Order) error {
-	dbCfg := pgx.ConnConfig{
-		Host: p.dbUrl,
-	}
-	conn, err := pgx.Connect(dbCfg)
+	conn, err := pgx.Connect(p.cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		return err
@@ -48,7 +52,7 @@ func (p *PostgreSQl) Add(id string, ord order.Order) error {
 	defer conn.Close()
 
 	data, _ := ord.SaveToJson()
-	_, err = conn.Query("insert into wb_orders values ($1, $2)", id, data)
+	_, err = conn.Query("insert into wb_l0.wb_orders values ($1, $2)", id, data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[DB] add order failed: %v\n", err)
 	}
@@ -57,19 +61,24 @@ func (p *PostgreSQl) Add(id string, ord order.Order) error {
 
 func (p *PostgreSQl) Find(id string) (order.Order, error) {
 	ord := order.Order{}
+	var b []byte
 
-	dbCfg := pgx.ConnConfig{
-		Host: p.dbUrl,
-	}
-	conn, err := pgx.Connect(dbCfg)
+	conn, err := pgx.Connect(p.cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 	defer conn.Close()
 
-	r := conn.QueryRow("select jsondata from wb_orders where order_uid=$1", id)
-	err = r.Scan(&ord)
+	r := conn.QueryRow("select jsondata from wb_l0.wb_orders where order_uid=$1", id)
+	err = r.Scan(&b)
+	if err != nil {
+		return order.Order{}, err
+	}
+	err = ord.LoadFromJson(b)
+	if err != nil {
+		return order.Order{}, err
+	}
 	if err != nil {
 		return order.Order{}, err
 	}
@@ -80,24 +89,29 @@ func (p *PostgreSQl) ReadAll() (map[string]order.Order, error) {
 	m := make(map[string]order.Order)
 	ord := order.Order{}
 	var id string
+	var b []byte
 
-	dbCfg := pgx.ConnConfig{
-		Host: p.dbUrl,
-	}
-	conn, err := pgx.Connect(dbCfg)
+	conn, err := pgx.Connect(p.cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 	defer conn.Close()
 
-	rs, err := conn.Query("select id, jsondata from wb_orders")
+	rs, err := conn.Query("select order_uid, jsondata from wb_l0.wb_orders")
 	if err != nil {
 		return m, err
 	}
 
 	for rs.Next() {
-		rs.Scan(&id, &ord)
+		err := rs.Scan(&id, &b)
+		if err != nil {
+			return nil, err
+		}
+		err = ord.LoadFromJson(b)
+		if err != nil {
+			return nil, err
+		}
 		m[id] = ord
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/nats-io/stan.go"
 	"github.com/xpoh/WB_L0/internal/order"
+	"github.com/xpoh/WB_L0/internal/storage"
 	"github.com/xpoh/WB_L0/internal/worker"
 	"log"
 	"testing"
@@ -28,10 +29,12 @@ func BenchmarkQueue_Start(b *testing.B) {
 				return
 			}
 		}()
+		backup := storage.NewPostgreSQl("postgres://akaddr:aswqas@localhost:5432/base10")
+		cache := storage.NewInMemory(backup)
 
 		w := make([]*worker.Worker, Cfg.MaxWorkers)
 		for i, v := range w {
-			v = worker.NewWorker("worker #"+fmt.Sprint(i), ctx, ch)
+			v = worker.NewWorker("worker #"+fmt.Sprint(i), ctx, ch, cache)
 			go v.Run()
 		}
 

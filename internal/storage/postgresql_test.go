@@ -2,21 +2,24 @@ package storage
 
 import (
 	"github.com/xpoh/WB_L0/internal/order"
+	"log"
 	"reflect"
 	"testing"
 )
 
 func TestPostgreSQl_Add(t *testing.T) {
-	ord := order.Order{}
-	ord.FillFakeData()
+	type fields *PostgreSQl
 
-	type fields struct {
-		dbUrl string
-	}
 	type args struct {
 		id  string
 		ord order.Order
 	}
+
+	p := NewPostgreSQl("postgres://akaddr:aswqas@localhost:5432/base10")
+
+	ord := order.NewOrder()
+	ord.FillFakeData()
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -24,20 +27,17 @@ func TestPostgreSQl_Add(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:   "Add one",
-			fields: fields{dbUrl: "localhost:5432"},
+			name:   "Simple one add",
+			fields: p,
 			args: args{
 				id:  ord.OrderUid,
-				ord: ord,
+				ord: *ord,
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &PostgreSQl{
-				dbUrl: tt.fields.dbUrl,
-			}
 			if err := p.Add(tt.args.id, tt.args.ord); (err != nil) != tt.wantErr {
 				t.Errorf("Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -46,9 +46,11 @@ func TestPostgreSQl_Add(t *testing.T) {
 }
 
 func TestPostgreSQl_Find(t *testing.T) {
-	type fields struct {
-		dbUrl string
-	}
+	type fields *PostgreSQl
+	p := NewPostgreSQl("postgres://akaddr:aswqas@localhost:5432/base10")
+	ord := order.NewOrder()
+	ord.FillFakeData()
+
 	type args struct {
 		id string
 	}
@@ -59,13 +61,17 @@ func TestPostgreSQl_Find(t *testing.T) {
 		want    order.Order
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:    "Simple find test",
+			fields:  p,
+			args:    args{id: ord.OrderUid},
+			want:    *ord,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &PostgreSQl{
-				dbUrl: tt.fields.dbUrl,
-			}
+			p.Add(tt.args.id, *ord)
 			got, err := p.Find(tt.args.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Find() error = %v, wantErr %v", err, tt.wantErr)
@@ -79,57 +85,29 @@ func TestPostgreSQl_Find(t *testing.T) {
 }
 
 func TestPostgreSQl_ReadAll(t *testing.T) {
-	type fields struct {
-		dbUrl string
-	}
+	type fields *PostgreSQl
+	p := NewPostgreSQl("postgres://akaddr:aswqas@localhost:5432/base10")
+
 	tests := []struct {
 		name    string
 		fields  fields
-		want    map[string]order.Order
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:    "Simple Read all test",
+			fields:  p,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &PostgreSQl{
-				dbUrl: tt.fields.dbUrl,
-			}
+
 			got, err := p.ReadAll()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReadAll() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ReadAll() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPostgreSQl_WriteAll(t *testing.T) {
-	type fields struct {
-		dbUrl string
-	}
-	type args struct {
-		m map[string]order.Order
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &PostgreSQl{
-				dbUrl: tt.fields.dbUrl,
-			}
-			if err := p.WriteAll(tt.args.m); (err != nil) != tt.wantErr {
-				t.Errorf("WriteAll() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			log.Println(got)
 		})
 	}
 }
