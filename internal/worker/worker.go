@@ -13,23 +13,23 @@ type Worker struct {
 	inQue chan stan.Msg
 }
 
-func NewWorker(uid string, ctx context.Context, in_que chan stan.Msg) *Worker {
-	return &Worker{ctx: ctx, inQue: in_que, uid: uid}
+func NewWorker(uid string, ctx context.Context, inQue chan stan.Msg) *Worker {
+	return &Worker{ctx: ctx, inQue: inQue, uid: uid}
 }
 
 func (w *Worker) Run() {
 	var msg stan.Msg
-	order := order.NewOrder()
+	ord := order.NewOrder()
 
 	for {
 		select {
 		case <-w.ctx.Done():
 			break
 		case msg = <-w.inQue:
-			if err := order.LoadFromJson(msg.Data); err != nil {
+			if err := ord.LoadFromJson(msg.Data); err != nil {
 				log.Println(err)
 			} else {
-				log.Printf("Parsed order succseful [%s]. OrderId=%v\n", w.uid, order.OrderUid)
+				log.Printf("Parsed ord succseful [%s]. OrderId=%v\n", w.uid, ord.OrderUid)
 			}
 		}
 	}
