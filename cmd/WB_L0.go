@@ -48,7 +48,7 @@ func main() {
 		}
 	})
 
-	go router.Run(":80")
+	go router.Run(":8080")
 
 	// Wait for a SIGINT (perhaps triggered by user with CTRL-C)
 	// Run cleanup when signal is received

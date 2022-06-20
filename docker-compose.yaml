@@ -15,6 +15,18 @@
 
 
 services:
+  orders:
+    build: .
+    image: orders
+    depends_on:
+      - db
+      - nats
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    ports:
+      - "80:80"   # Default app port (host:container)
+
   db:
     image: postgres:latest
     restart: always
@@ -32,5 +44,10 @@ services:
       - 4222:4222
       - 8222:8222
       - 6222:6222
+
+networks:
+  default:
+    name: net
+    driver: bridge
 
 
